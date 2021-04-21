@@ -1,18 +1,10 @@
 (ql:quickload "cl-charms")
 (ql:quickload "trivial-left-pad")
 
-(defvar *splits* '(("Chozo" 0 0 0)("Kraid" 0 0 0)("Wave Beam" 0 0 0)("Phantoon" 0 0 0)("Botwoon" 0 0 0)("Draygon" 0 0 0)("Ridley" 0 0 0)("Mother Brain" 0 0 0)))
+(defvar *splits* '(("Chozo" 0 0 0)("Kraid" 0 0 0)("Wave Beam" 0 0 0)("Phantoon" 0 0 0)("Botwoon" 0 0 0)("Draygon" 0 0 0)("Lower Norfair" 0 0 0)("Ridley" 0 0 0)("Mother Brain" 0 0 0)))
 (defvar *current-split-index* 0)
 (defvar *interval* internal-time-units-per-second)
 (defvar *start-time* 0)
-
-(defun current-time ()
-  (let ((time (get-internal-real-time)))
-	(cond ((zerop *start-time*) (setf *start-time* time))
-		  (t (- time *start-time*)))))
-
-(defun time-to-millis (time)
-  (* (/ time *interval*) 1000))
 
 (defun get-value (list index)
   (cond
@@ -25,6 +17,34 @@
 	((null list) '())
 	((zerop index) (setq list (cons value (cdr list))))
 	(t (setq list (cons (car list) (change-value (cdr list) (1- index) value))))))
+
+(defun get-minimum (splits index current_minimum)
+  (cond
+	((null splits) '())
+	(t
+	 (let ((val (get-value (car splits) index)))
+	   (cond ((< val current_minimum) 
+
+(defun read-list-splits (filename)
+  (with-open-file (in filename)
+    (with-standard-io-syntax
+      (setf *splits* (read in)))))
+
+(defun save-split-file (filename)
+  (with-open-file (out filename
+                   :direction :output
+                   :if-exists :append)
+	(with-standard-io-syntax
+	  (print *splits* out))))
+  
+
+(defun current-time ()
+  (let ((time (get-internal-real-time)))
+	(cond ((zerop *start-time*) (setf *start-time* time))
+		  (t (- time *start-time*)))))
+
+(defun time-to-millis (time)
+  (* (/ time *interval*) 1000))
 
 (defun add-to-string-if-not-empty (string suffix)
   (cond ((not (zerop (length string))) (concatenate 'string string suffix))))
@@ -97,7 +117,7 @@
 	  *splits*
 	  *current-split-index*)))))
 
-(defun hello-world ()
+(defun hello-world (filename)
   (charms:with-curses ()
     (charms:disable-echoing)
     (charms:enable-raw-input :interpret-control-characters t)
@@ -118,6 +138,7 @@
 				  ((#\q) (return-from driver-loop)))
 				(sleep 0.01)
 				)))
+  (save-split-file filename)
   (get-value *splits* (1- *current-split-index*))
 )
 
