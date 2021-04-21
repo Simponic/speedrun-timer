@@ -1,7 +1,7 @@
 (ql:quickload "cl-charms")
 (ql:quickload "trivial-left-pad")
 
-(defvar *splits* '(("start" 0 0 0)("Kraid" 0 0 0)("Phantoon" 0 0 0)("Draygon" 0 0 0)("Ridley" 0 0 0)))
+(defvar *splits* '(("Chozo" 0 0 0)("Kraid" 0 0 0)("Wave Beam" 0 0 0)("Phantoon" 0 0 0)("Botwoon" 0 0 0)("Draygon" 0 0 0)("Ridley" 0 0 0)("Mother Brain" 0 0 0)))
 (defvar *current-split-index* 0)
 (defvar *interval* internal-time-units-per-second)
 (defvar *start-time* 0)
