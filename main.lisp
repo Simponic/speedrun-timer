@@ -1,7 +1,8 @@
 (ql:quickload "cl-charms")
 (ql:quickload "trivial-left-pad")
 
-(defvar *splits* '(("Chozo" 0 0 0)("Kraid" 0 0 0)("Wave Beam" 0 0 0)("Phantoon" 0 0 0)("Botwoon" 0 0 0)("Draygon" 0 0 0)("Lower Norfair" 0 0 0)("Ridley" 0 0 0)("Mother Brain" 0 0 0)))
+(defvar *splits* '(("Chozo" 0 0 0 0)("Kraid" 0 0 0 0)("Wave Beam" 0 0 0 0)("Phantoon" 0 0 0 0)("Botwoon" 0 0 0 0)("Draygon" 0 0 0 0)("Lower Norfair" 0 0 0 0)("Ridley" 0 0 0 0)("Mother Brain" 0 0 0 0)))
+(defvar *all-splits* '())
 (defvar *current-split-index* 0)
 (defvar *interval* internal-time-units-per-second)
 (defvar *start-time* 0)
@@ -18,25 +19,38 @@
 	((zerop index) (setq list (cons value (cdr list))))
 	(t (setq list (cons (car list) (change-value (cdr list) (1- index) value))))))
 
-(defun get-minimum (splits index current_minimum)
+(defun get-minimum (list index current_minimum)
   (cond
-	((null splits) '())
+	((null list) current_minimum)
 	(t
-	 (let ((val (get-value (car splits) index)))
-	   (cond ((< val current_minimum) 
+	 (let ((val (get-value (get-value (car list) index) 3)))
+	   (cond ((< val current_minimum) (get-minimum (cdr list) index val))
+			 (t (get-minimum (cdr list) index current_minimum)))))))
+
+(defun load-splits (index)
+  (cond ((null (get-value *splits* index)) nil)
+		(t
+		 (progn
+		   (setf *splits*
+			 (change-value *splits* index
+					(change-value (get-value *splits* index) 4
+								  (get-minimum *all-splits* index 99999999999999999999999))))
+		   (load-splits (1+ index))
+			 ))))
+		  
 
 (defun read-list-splits (filename)
-  (with-open-file (in filename)
-    (with-standard-io-syntax
-      (setf *splits* (read in)))))
+  (with-open-file (in filename :if-does-not-exist :create)
+	(with-standard-io-syntax
+	  (setf *all-splits* (read in)))))
 
 (defun save-split-file (filename)
   (with-open-file (out filename
-                   :direction :output
-                   :if-exists :append)
+					   :direction :output
+				   :if-does-not-exist :create
+                   :if-exists :supersede)
 	(with-standard-io-syntax
-	  (print *splits* out))))
-  
+	  (print *all-splits* out))))
 
 (defun current-time ()
   (let ((time (get-internal-real-time)))
@@ -118,6 +132,7 @@
 	  *current-split-index*)))))
 
 (defun hello-world (filename)
+  (cond ((y-or-n-p "Read file? ") (progn (read-list-splits filename) (load-splits 0))))
   (charms:with-curses ()
     (charms:disable-echoing)
     (charms:enable-raw-input :interpret-control-characters t)
@@ -138,7 +153,8 @@
 				  ((#\q) (return-from driver-loop)))
 				(sleep 0.01)
 				)))
-  (save-split-file filename)
+  (setf *all-splits* (cons *splits* *all-splits*))
+  (cond ((y-or-n-p "Save?") (save-split-file filename)))
   (get-value *splits* (1- *current-split-index*))
 )
 
