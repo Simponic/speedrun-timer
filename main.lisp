@@ -1,160 +1,59 @@
-(ql:quickload "cl-charms")
-(ql:quickload "trivial-left-pad")
+(load "helper.lisp")
+(load "splits.lisp")
 
-(defvar *splits* '(("Chozo" 0 0 0 0)("Kraid" 0 0 0 0)("Wave Beam" 0 0 0 0)("Phantoon" 0 0 0 0)("Botwoon" 0 0 0 0)("Draygon" 0 0 0 0)("Lower Norfair" 0 0 0 0)("Ridley" 0 0 0 0)("Mother Brain" 0 0 0 0)))
-(defvar *all-splits* '())
-(defvar *current-split-index* 0)
-(defvar *interval* internal-time-units-per-second)
-(defvar *start-time* 0)
+(defvar current-split '())
+(defvar done-splits '())
+(defvar last-time-space-pressed 0)
+(defvar pb 0)
 
-(defun get-value (list index)
+(defun read-in-splits (filename)
   (cond
-	((null list) nil)
-	((zerop index) (car list))
-	(t (get-value (cdr list) (1- index)))))
+	((y-or-n-p "Read file")
+	  (read-file-of-splits filename)
+	  (setf
+	   *splits*
+	   (set-column-in-run-from-other-run
+		2
+		(make-run-of-best-segments *all-splits* 0)
+		*splits*))
+	  (setf
+	   *splits*
+	   (set-column-in-run-from-other-run
+		3
+		(get-best-run *all-splits* (car *all-splits*) (cadr (car *splits*)))
+		*splits*))))
+  (setf pb (sum-splits *splits* 3))
+  (setf current-split (car *splits*))
+  (setf *splits* (cdr *splits*))
+)
 
-(defun change-value (list index value)
-  (cond
-	((null list) '())
-	((zerop index) (setq list (cons value (cdr list))))
-	(t (setq list (cons (car list) (change-value (cdr list) (1- index) value))))))
-
-(defun get-minimum (list index current_minimum)
-  (cond
-	((null list) current_minimum)
-	(t
-	 (let ((val (get-value (get-value (car list) index) 3)))
-	   (cond ((< val current_minimum) (get-minimum (cdr list) index val))
-			 (t (get-minimum (cdr list) index current_minimum)))))))
-
-(defun load-splits (index)
-  (cond ((null (get-value *splits* index)) nil)
-		(t
-		 (progn
-		   (setf *splits*
-			 (change-value *splits* index
-					(change-value (get-value *splits* index) 4
-								  (get-minimum *all-splits* index 99999999999999999999999))))
-		   (load-splits (1+ index))
-			 ))))
-		  
-
-(defun read-list-splits (filename)
-  (with-open-file (in filename :if-does-not-exist :create)
-	(with-standard-io-syntax
-	  (setf *all-splits* (read in)))))
-
-(defun save-split-file (filename)
-  (with-open-file (out filename
-					   :direction :output
-				   :if-does-not-exist :create
-                   :if-exists :supersede)
-	(with-standard-io-syntax
-	  (print *all-splits* out))))
-
-(defun current-time ()
-  (let ((time (get-internal-real-time)))
-	(cond ((zerop *start-time*) (setf *start-time* time))
-		  (t (- time *start-time*)))))
-
-(defun time-to-millis (time)
-  (* (/ time *interval*) 1000))
-
-(defun add-to-string-if-not-empty (string suffix)
-  (cond ((not (zerop (length string))) (concatenate 'string string suffix))))
-
-(defun number->two-wide (num)
-  (cond ((not (zerop num)) (format nil "~2,'0D" num)) (t "")))
-
-(defun millis->strings (millis)
-  (let*
-	((hours   (/ millis (* 1000 60 60)))
-	 (minutes (mod (/ millis (* 1000 60)) 60))
-	 (seconds (mod (/ millis 1000) 60))
-	 (centis  (mod millis 100)))
-	(list
-	 (number->two-wide (floor hours))
-	 (number->two-wide (floor minutes))
-	 (format nil "~2,'0d" (floor seconds))
-	 (format nil "~2,'0d" (floor centis)))))
-
-(defun time->string (time_strs)
-  (concatenate 'string
-   (add-to-string-if-not-empty (car   time_strs) ":")
-   (add-to-string-if-not-empty (cadr  time_strs) ":")
-   (add-to-string-if-not-empty (caddr time_strs) ".")
-   (cadddr time_strs)))
-
-(defun format-split (split)
-  (cond
-	((null split) "")
-	(t
-	 (concatenate
-	  'string
-	  (trivial-left-pad:left-pad
-	   (cond
-		 ((numberp (car split))
-		  (time->string (millis->strings (car split))))
-		 (t (car split)))
-	  15)
-	  (format-split (cdr split))))))
-
-(defun start-split (split)
-  (setq split (change-value split 1 (time-to-millis (current-time))))
-  (setq split (change-value split 2 (time-to-millis (current-time)))))
-
-(defun update-split (split)
-  (cond
-	((zerop (caddr split)) (setq split (start-split split)))
-  )
-  (setq split (change-value split 2 (time-to-millis (current-time))))
-  (setq split (change-value split 3 (- (caddr split) (cadr split)))))
-
-(defun format-splits (current_list)
-  (cond
-	((null current_list) "")
-	(t
-	 (concatenate
-	  'string
-	  (format nil "|~a|~%" (format-split (car current_list)))
-	  (format-splits (cdr current_list)))))
-  )
-   
-(defun do-on-current-split (f)
-  (setq
-   *splits*
-   (change-value
-	*splits*
-	*current-split-index*
-	(funcall f
-	 (get-value
-	  *splits*
-	  *current-split-index*)))))
-
-(defun hello-world (filename)
-  (cond ((y-or-n-p "Read file? ") (progn (read-list-splits filename) (load-splits 0))))
+(defun main (filename)
+  (read-in-splits filename)
+  (setf last-time-space-pressed (get-internal-real-time))
   (charms:with-curses ()
     (charms:disable-echoing)
     (charms:enable-raw-input :interpret-control-characters t)
     (charms:enable-non-blocking-mode charms:*standard-window*)
-	(setq *start-time* (get-internal-real-time))
 	(loop :named driver-loop
 		  :for c := (charms:get-char charms:*standard-window*
 									 :ignore-error t)
 		  :do (progn
 				(charms:clear-window charms:*standard-window*)
-				(cond ((null (get-value *splits* *current-split-index*)) (return-from driver-loop)))
-				(do-on-current-split (lambda (x) (update-split x)))			
-				(charms:write-string-at-point charms:*standard-window*(format-splits *splits*) 0 0)
+				(if (null current-split) (return-from driver-loop))
+				(charms:write-string-at-point charms:*standard-window* (make-output (push-on-list current-split done-splits) 0 pb) 0 0)
 				(charms:refresh-window charms:*standard-window*)
+				(setf current-split (update-split current-split last-time-space-pressed))
 				(case c
 				  ((nil) nil)
-				  ((#\Space) (incf *current-split-index* 1))
+				  ((#\Space)
+				   (progn
+					 (setf last-time-space-pressed (get-internal-real-time))
+					 (setf done-splits (push-on-list current-split done-splits))
+					 (setf current-split (car *splits*))
+					 (setf *splits* (cdr *splits*))))
 				  ((#\q) (return-from driver-loop)))
 				(sleep 0.01)
 				)))
-  (setf *all-splits* (cons *splits* *all-splits*))
-  (cond ((y-or-n-p "Save?") (save-split-file filename)))
-  (get-value *splits* (1- *current-split-index*))
-)
-
+  (setf *all-splits* (cons done-splits *all-splits*))
+  (cond ((y-or-n-p "Save?") (with-open-file (output filename :direction :output :if-exists :supersede) (print *all-splits* output))))
+  (format nil (format-time (sum-splits done-splits 1))))
