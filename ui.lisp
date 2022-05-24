@@ -115,5 +115,4 @@
                          (:resize nil)
                          ((nil)
                           (mapcar #'croatoan:refresh (cons scr windows))
-                          (inc current-scroll-index 0.02)
                           (sleep (/ 1 60))))))
