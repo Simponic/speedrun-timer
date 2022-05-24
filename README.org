@@ -1,0 +1,10 @@
+* SBCL Speedrun Timer
+This is a complete rewrite of my first Lisp project: a speedrun timer. It uses ncurses and a SQLite database, with the [[https://github.com/fukamachi/mito][MITO ORM.]]
+** Requirements
++ [[https://www.quicklisp.org/beta/][Quicklisp]]
++ [[http://www.sbcl.org/platform-table.html][SBCL]]
+** Usage
+*** Importing categories
+Config files are documented by the examples in ~configs~. Once a config file is written, import that category and its splits by running ~sbcl --load main.lisp -i <path-to-config>~. This will add the category and its splits to the timer's SQLite database.
+*** Running
+Simply ~sbcl --load main.lisp~
