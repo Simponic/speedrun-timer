@@ -61,7 +61,6 @@
                    :name (get-property category-section "name")
                    :percentage (get-property category-section "percentage")))
 
-
 ;; Creates the splits
 (defun create-category-split-objects (category splits-section &optional (splits '()))
   (if (not splits-section)

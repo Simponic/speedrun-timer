@@ -61,7 +61,7 @@
          (elements (highlight-list-elements hl))
          (current-element-index (highlight-list-current-element-index hl))
          (elements-to-draw-subseq (if (>= height (length elements))
-                                      (list 0 (1- (length elements)))
+                                      (list 0 (length elements))
                                       (cond
                                         ((> height (1+ current-element-index))
                                          (list 0 height))
@@ -81,7 +81,9 @@
                          (cdr (assoc 'selected-highlight *colors*))
                          (cdr (assoc 'unselected-highlight *colors*))))
                (inc yi)
-               (croatoan:add highlight-menu el :position `(,yi 1)))
+               (croatoan:add highlight-menu
+                             (format-line el width (highlight-list-scroll-i hl))
+                             :position `(,yi 1)))
              (subseq elements (car elements-to-draw-subseq) (cadr elements-to-draw-subseq))))
    highlight-menu))
          
@@ -98,11 +100,14 @@
                          (#\b
                           (let ((hl (make-instance 'highlight-list
                                                    :scroll-i 0
-                                                   :elements '("HELLO" "WORLD" "MY" "NAME" "IS" "LOGAN" "HUNT" "AND" "I" "LIKE" "PIZZA")
+                                                   :elements `(
+                                                               (("HELLO" . ,(/ 1 2)) ("" . ,(/ 1 2)))
+                                                               (("THIS IS A TEST" . ,(/ 1 2)) (" OF WRAPPING TRUNCATION" . ,(/ 1 2)))
+                                                              )
                                                    :current-element-index current-index
                                                    :height 6
-                                                   :width 10)))
-                            (push (highlight-list-window hl '(20 20)) windows))
+                                                   :width 20)))
+                            (push (highlight-list-window hl '(10 20)) windows))
                           (push (figlet-window *lispruns-logo* scr '(2 2)) windows)
                           (inc current-index))
                          (#\q (return-from croatoan:event-case))
@@ -110,4 +115,5 @@
                          (:resize nil)
                          ((nil)
                           (mapcar #'croatoan:refresh (cons scr windows))
+                          (inc current-scroll-index 0.02)
                           (sleep (/ 1 60))))))
