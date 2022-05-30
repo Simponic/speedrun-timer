@@ -6,3 +6,6 @@
   `(let ((it (getf ,options ,opt)))
      (when it
        ,@body)))
+
+(defun max-length (lists)
+  (reduce (lambda (a x) (max a x)) (mapcar #'length lists)))

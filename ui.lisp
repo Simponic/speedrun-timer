@@ -8,7 +8,7 @@
 
 (defparameter *colors*
   '((main . (:green :black))
-    (figlet . (:black :white))
+    (timer-box . (:red :black))
     (selected-highlight . (:blue :black))
     (unselected-highlight . (:white :black))))
 
@@ -18,6 +18,7 @@
         (sh (croatoan:height screen)))
     (list (round (- (/ sh 2) (/ height 2))) (round (- (/ sw 2) (/ width 2))))))
 
+;; Write a list of horizontal slices to the screen scr at position pos
 (defun write-horizontal-slice-list (scr pos slices)
   (let ((yi (car pos)))
     (mapcar (lambda (s)
@@ -25,19 +26,20 @@
               (inc yi))
             slices)))
 
-;; Draws a list of strings horizontally in a window with padding and an optional border
-(defun figlet-window (title-slices scr pos &key (padding 2) (border nil))
-  (let* ((width (+ (reduce (lambda (a x) (max a x)) (mapcar #'length title-slices)) (* 2 padding)))
-         (height (+ (length *lispruns-logo*) (* 2 padding)))
-         (title-box (make-instance 'croatoan:window
-                                   :border border
-                                   :width width
-                                   :height height
-                                   :position pos)))
-    (setf (croatoan:background title-box) (make-instance 'croatoan:complex-char :color-pair (cdr (assoc 'figlet *colors*))))
-    (write-horizontal-slice-list title-box `(,padding ,padding) title-slices)
-    title-box))
+;; Creates a window with the total time and statistics 
+(defun timer-window (speedrun pos width height)
+  (let* ((timerglet (lispglet (format-time (make-time-alist (speedrun-elapsed speedrun)))))
+         (timer-box (make-instance 'croatoan:window
+                                   :border t
+                                   :position pos
+                                   :width width 
+                                   :height height)))
+    (setf (croatoan:color-pair timer-box)
+          (cdr (assoc 'timer-box *colors*)))
+    (write-horizontal-slice-list timer-box '(1 1) timerglet)
+    timer-box))
 
+;; Class to hold state for a list where one element is highlighted/selected
 (defclass highlight-list ()
   ((scroll-i
     :initarg :scroll-i
@@ -55,11 +57,12 @@
     :initarg :width
     :accessor highlight-list-width)))
 
+;; Create the actual window to render a highlight list hl at position pos
 (defun highlight-list-window (hl pos)
-  (let* ((width (- (highlight-list-width hl) 2))
+  (let* ((width (- (highlight-list-width hl) 2)) ;; Magic number 2's are for the border on both sides
          (height (- (highlight-list-height hl) 2))
          (elements (highlight-list-elements hl))
-         (current-element-index (highlight-list-current-element-index hl))
+         (current-element-index (mod (highlight-list-current-element-index hl) (length elements)))
          (elements-to-draw-subseq (if (>= height (length elements))
                                       (list 0 (length elements))
                                       (cond
@@ -71,7 +74,7 @@
                                              (list (- current-element-index (floor dy)) (1+ (+ current-element-index (ceiling dy)))))))))
          (highlight-menu (make-instance 'croatoan:window
                                         :border t
-                                        :width (+ 2 width)
+                                        :width (+ 2 width) ;; Another magic 2
                                         :height (+ 2 height)
                                         :position pos)))
    (let ((yi 0))
@@ -86,33 +89,47 @@
                              :position `(,yi 1)))
              (subseq elements (car elements-to-draw-subseq) (cadr elements-to-draw-subseq))))
    highlight-menu))
-         
-(defun run-ui ()
-  (croatoan:with-screen (scr :input-blocking nil :input-echoing nil :cursor-visible nil :enable-colors t :input-buffering nil :input-blocking nil)
-    (croatoan:clear scr)
-    (croatoan:refresh scr)
-    (setf (croatoan:background scr) (make-instance 'croatoan:complex-char :color-pair (cdr (assoc 'main *colors*))))
-    (croatoan:draw-border scr)
 
-    (defvar windows '())
-    (defvar current-index 0)
-    (croatoan:event-case (scr event)
-                         (#\b
-                          (let ((hl (make-instance 'highlight-list
-                                                   :scroll-i 0
-                                                   :elements `(
-                                                               (("HELLO" . ,(/ 1 2)) ("" . ,(/ 1 2)))
-                                                               (("THIS IS A TEST" . ,(/ 1 2)) (" OF WRAPPING TRUNCATION" . ,(/ 1 2)))
-                                                              )
-                                                   :current-element-index current-index
-                                                   :height 6
-                                                   :width 20)))
-                            (push (highlight-list-window hl '(10 20)) windows))
-                          (push (figlet-window *lispruns-logo* scr '(2 2)) windows)
-                          (inc current-index))
-                         (#\q (return-from croatoan:event-case))
-                         (#\c (croatoan:clear scr))
-                         (:resize nil)
-                         ((nil)
-                          (mapcar #'croatoan:refresh (cons scr windows))
-                          (sleep (/ 1 60))))))
+(defun run-ui (category)
+  (croatoan:with-screen (scr :input-blocking nil :input-echoing nil :cursor-visible nil :enable-colors t :input-buffering nil :input-blocking nil)
+    (setf (croatoan:background scr) (make-instance 'croatoan:complex-char :color-pair (cdr (assoc 'main *colors*))))
+    (let* ((state 'TITLE)
+           (redraws '(title-instance))
+           (speedrun (make-speedrun category)))
+      (croatoan:event-case (scr event)
+        (#\q (return-from croatoan:event-case))
+        (#\space
+         (case state
+           ('TITLE
+            (start-speedrun speedrun)
+            (setf state 'RUNNING))
+           ('RUNNING (next-split speedrun))))
+        (:resize (nil))
+        ((nil)
+         (case state
+           ('TITLE 
+            (if (member 'title-instance redraws)
+                (let* ((padding 3)
+                       (width (+ (* 2 padding) (max-length *lispruns-logo*)))
+                       (height (+ (* 2 padding) (length *lispruns-logo*)))
+                       (logo-centered (center-box scr width height))
+                       (logo-box (make-instance 'croatoan:window :border t :width width :height height :position logo-centered)))
+                  (write-horizontal-slice-list logo-box `(,padding ,padding) *lispruns-logo*)
+                  (croatoan:refresh logo-box))))
+            ('RUNNING
+             (update-time speedrun)
+             (let ((timer-instance (timer-window speedrun '(10 10) 70 10)))
+               (croatoan:refresh timer-instance))))
+         (setf redraws '())
+         (sleep (/ 1 30)))))))
+
+
+;;    (setq hl (make-instance 'highlight-list
+;;                            :scroll-i 0
+;;                            :elements `(
+;;                                        (("HELLO" . ,(/ 1 2)) ("" . ,(/ 1 2)))
+;;                                        (("THIS IS A TEST" . ,(/ 1 2)) (" OF WRAPPING TRUNCATION" . ,(/ 1 2)))
+;;                                        )
+;;                            :current-element-index current-index
+;;                            :height 6
+;;                            :width 20))

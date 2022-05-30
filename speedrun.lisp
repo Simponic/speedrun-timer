@@ -52,8 +52,8 @@
         (speedrun-start-timestamp speedrun) (get-internal-real-time)
         (run-split-start-time (current-split speedrun)) (local-time:now)))
 
-;; Set the state of the speedrun to be stopped if there are no more
-;; splits, or set the current split to the next one
+;; Set the state of the speedrun to be stopped if there are no more splits.
+;; Or, set the current split to the next one in the list.
 (defun next-split (speedrun)
   (let ((now (local-time:now)))
     (setf (run-split-end-time (current-split speedrun)) now)

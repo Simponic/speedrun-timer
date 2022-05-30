@@ -15,5 +15,3 @@
                    (sxql:where (:= :category category))
                    ;; Assumption that split categories are entered in the correct order by id
                    (sxql:order-by :id)))
-
-;; select *, sum(julianday(end_time)-julianday(start_time))*24*60*60 as total_time from run_split group by run_id order by total_time;
