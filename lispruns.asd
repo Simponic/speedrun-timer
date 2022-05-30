@@ -17,9 +17,9 @@
                  (:file "speedrun" :depends-on ("util")) ;; The actual timer logic
                  (:file "database/category") ;; Category DAO
                  (:file "database/run") ;; Run DAO
-                 (:file "main" :depends-on ("util"
+                 (:file "main" :depends-on ("database/category"
+                                            "database/run"
+                                            "util"
                                             "config"
                                             "ui"
-                                            "speedrun"
-                                            "database/category"
-                                            "database/run"))))
+                                            "speedrun"))))

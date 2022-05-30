@@ -104,7 +104,7 @@
             (start-speedrun speedrun)
             (setf state 'RUNNING))
            ('RUNNING (next-split speedrun))))
-        (:resize (nil))
+        (:resize nil)
         ((nil)
          (case state
            ('TITLE 

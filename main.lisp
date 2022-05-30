@@ -11,10 +11,7 @@
    :arg-parser #'identity))
 
 (defun main ()
-  (let ((options (opts:get-opts))
-        (category (car (mito:select-dao 'category))))
+  (let ((options (opts:get-opts)))
     (when-option (options :import)
       (import-config (getf options :import)))
-    (run-ui category)))
-
-(main)
+    (run-ui (car (mito:select-dao 'category)))))
