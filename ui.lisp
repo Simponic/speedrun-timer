@@ -96,28 +96,38 @@
                  ('TITLE 
                   (if (member 'title-instance redraws)
                       (croatoan:clear scr)
-                      (let* ((padding 3)
-                             (width (+ (* 2 padding) (max-length *lispruns-logo*)))
-                             (height (+ (* 2 padding) (length *lispruns-logo*)))
+                      (let* ((padding 4)
+                             (title (append *lispruns-logo* '("" "CONTROLS" "  SPACE to start or continue to the next split" "  Q to quit")))
+                             (width (+ (* 2 padding) (max-length title)))
+                             (height (+ (* 2 padding) (length title)))
                              (logo-centered (center-box scr width height))
                              (logo-box (make-instance 'croatoan:window :border t :width width :height height :position logo-centered)))
-                        (write-horizontal-slice-list logo-box `(,padding ,padding) *lispruns-logo*)
-                        (croatoan:refresh logo-box))))
+                        (if (< (croatoan:width scr) width)
+                            (progn
+                              (croatoan:add scr "Please increase width of your terminal" :position '(0 0))
+                              (croatoan:refresh scr))
+                            (progn
+                              (write-horizontal-slice-list logo-box `(,padding ,padding) title)
+                              (croatoan:refresh logo-box))))))
                  ('RUNNING
-                  (update-time speedrun)
+                  (if (eq (speedrun-state speedrun) 'RUNNING)
+                      (update-time speedrun))
                   (if (member 'timer-instance redraws)
                       (croatoan:clear scr))
                   (if (zerop (mod frame 4)) 
-                      (let* ((screen-thirds (floor (/ (croatoan:width scr) 3)))
+                      (let* ((max-width (min 90 (croatoan:width scr)))
+                             (centered-x (cadr (center-box scr max-width 0)))
+                             (timer-height 8)
+                             (splits-height (- (croatoan:height scr) timer-height))
                              (split-list (make-instance 'highlight-list
                                                         :scroll-i scroll 
                                                         :current-element-index (if (eq (speedrun-state speedrun) 'STOPPED) (1- (length (speedrun-splits speedrun))) (speedrun-current-split-index speedrun))
-                                                        :height (croatoan:height scr)
-                                                        :width screen-thirds
+                                                        :height splits-height
+                                                        :width max-width
                                                         :elements (mapcar #'category-split-name csplits)))
 ;;                                                        :elements `((("FIRST SPLIT IS EPIC" . ,(/ 4 12)) ("" . ,(/ 1 12)) ("10:10:00.22" . ,(/ 3 12)) ("" . ,(/ 1 12)) ("20:00.00" . ,(/ 3 12))))))
-                             (splits-instance (highlight-list-window split-list '(0 0)))
-                             (timer-instance (timer-window speedrun `(0 ,screen-thirds) (* 2 screen-thirds) 8)))
+                             (splits-instance (highlight-list-window split-list `(0 ,centered-x)))
+                             (timer-instance (timer-window speedrun `(,splits-height ,centered-x) max-width timer-height)))
                         (croatoan:refresh splits-instance)
                         (croatoan:refresh timer-instance)))))
                (setf redraws '()
@@ -134,5 +144,11 @@
                                  (setf redraws '(timer-instance))
                                  (setf state 'RUNNING))
                                 ('RUNNING (next-split speedrun))))
-                             (:resize (render))
+                             (:resize
+                              (case state
+                                ('TITLE
+                                 (setf redraws '(title-instance)))
+                                ('RUNNING
+                                 (croatoan:clear scr)))
+                              (render))
                              ((nil) (render)))))))

@@ -19,7 +19,9 @@
   (let ((input (read-line)))
     (if (ignore-errors (funcall validator input))
         input
-        (get-input prompt validator))))
+        (progn
+          (format t "E: Invalid input. Try again.")
+          (get-input prompt validator)))))
 
 ;; Options is an alist with the prompt string as the car and the value as the cdr
 (defun select-option (options)
@@ -49,8 +51,7 @@
                  (format t "That search came up with multiple results:")
                  (select-option filtered)))
               (progn (format t "E: Could not find option that matched query.~%")
-                     (select-option options))))))
-  (format t "~%"))
+                     (select-option options)))))))
 
 (defun main ()
   (let ((choice (select-option '(("Help" . HELP)
@@ -59,23 +60,23 @@
                                  ("Start a speedrun" . START-SPEEDRUN)
                                  ("Statistics" . LIST-CATEGORIES)
                                  ("Exit" . EXIT)))))
-    (format t "~a~%" choice)
     (case choice
       ('HELP
        (mapcar #'(lambda (x) (format t "~a~%" x)) *lispruns-logo*))
       ('IMPORT-CATEGORY
-       (import-category (get-input (format nil "Relative or absolute path to configuration file [~a]: " (uiop/os:getcwd)) 'probe-file)))
+       (import-category (get-input
+                         (format nil "Relative or absolute path to configuration file [~a]: "
+                                 (uiop/os:getcwd))
+                         'probe-file)))
       ('NEW-CATEGORY
        (format t "NEW CATEGORY~%"))
       ('START-SPEEDRUN
-       (speedrun-ui (car (mito:select-dao 'category))))
+        (let* ((categories (mito:select-dao 'category))
+               (category-alist (mapcar (lambda (category) `(,(category-name category) . ,category)) categories)))
+          (if categories
+              (speedrun-ui (select-option category-alist))
+              (format t "E: There are no categories. Try creating one or importing one"))))
       ('EXIT
        (quit))))
   (format t "~%")
   (main))
-
-  
-;;  (let ((options (opts:get-opts)))
-;;    (when-option (options :import)
-;;      (import-config (getf options :import)))
-;;    (run-ui (car (mito:select-dao 'category)))))
