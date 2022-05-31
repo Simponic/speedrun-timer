@@ -22,7 +22,7 @@
   (let ((start (ignore-errors (run-split-start-time run-split)))
         (end (or (ignore-errors (run-split-end-time run-split)) (local-time:now))))
     (if start
-        (floor (* 1000 (local-time:timestamp-difference end start))))))
+        (floor (* 100 (local-time:timestamp-difference end start))))))
 
 (defun format-elapsed-time (run-split)
   (let ((elapsed (run-split-elapsed-time run-split)))

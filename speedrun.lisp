@@ -44,7 +44,7 @@
 ;; Updates the current total elapsed time of the speedrun if it's running
 (defun update-time (speedrun)
   (if (eq (speedrun-state speedrun) 'RUNNING)
-      (setf (speedrun-elapsed speedrun) (* 1000 (/ (- (get-internal-real-time) (speedrun-start-timestamp speedrun)) internal-time-units-per-second)))))
+      (setf (speedrun-elapsed speedrun) (floor (* 100 (/ (- (get-internal-real-time) (speedrun-start-timestamp speedrun)) internal-time-units-per-second))))))
 
 ;; Initializes a speedrun to start running the timer
 (defun start-speedrun (speedrun)
@@ -64,7 +64,9 @@
       (setf (run-split-end-time (current-split speedrun)) now)
       (if (equal (speedrun-current-split-index speedrun) (1- (length (speedrun-splits speedrun))))
           (progn
-            (setf (speedrun-state speedrun) 'STOPPED)
+            (setf
+             (speedrun-elapsed speedrun) (apply '+ (mapcar 'run-split-elapsed-time (speedrun-splits speedrun)))
+             (speedrun-state speedrun) 'STOPPED)
             (save-speedrun speedrun))
           (progn
             (inc (speedrun-current-split-index speedrun))
