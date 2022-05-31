@@ -97,7 +97,7 @@
                   (if (member 'title-instance redraws)
                       (croatoan:clear scr)
                       (let* ((padding 4)
-                             (title (append *lispruns-logo* '("" "CONTROLS" "  SPACE to start or continue to the next split" "  Q to quit")))
+                             (title (append *lispruns-logo* '("" "CONTROLS" "  SPACE to start and to continue to the next split" "  Q to quit")))
                              (width (+ (* 2 padding) (max-length title)))
                              (height (+ (* 2 padding) (length title)))
                              (logo-centered (center-box scr width height))
@@ -121,10 +121,18 @@
                              (splits-height (- (croatoan:height scr) timer-height))
                              (split-list (make-instance 'highlight-list
                                                         :scroll-i scroll 
-                                                        :current-element-index (if (eq (speedrun-state speedrun) 'STOPPED) (1- (length (speedrun-splits speedrun))) (speedrun-current-split-index speedrun))
+                                                        :current-element-index (speedrun-current-split-index speedrun)
                                                         :height splits-height
                                                         :width max-width
-                                                        :elements (mapcar #'category-split-name csplits)))
+                                                        :elements (mapcar (lambda (csplit speedrun-split)
+                                                                            `(
+                                                                              (,(category-split-name csplit) . ,(/ 4 12))
+                                                                              ("" . ,(/ 1 12))
+                                                                              (,(format-elapsed-time speedrun-split) . ,(/ 3 12))
+                                                                              ))
+                                                                          csplits
+                                                                          (speedrun-splits speedrun))))
+;;                                                        :elements (mapcar #'category-split-name csplits)))
 ;;                                                        :elements `((("FIRST SPLIT IS EPIC" . ,(/ 4 12)) ("" . ,(/ 1 12)) ("10:10:00.22" . ,(/ 3 12)) ("" . ,(/ 1 12)) ("20:00.00" . ,(/ 3 12))))))
                              (splits-instance (highlight-list-window split-list `(0 ,centered-x)))
                              (timer-instance (timer-window speedrun `(,splits-height ,centered-x) max-width timer-height)))

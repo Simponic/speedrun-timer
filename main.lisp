@@ -69,13 +69,25 @@
                                  (uiop/os:getcwd))
                          'probe-file)))
       ('NEW-CATEGORY
-       (format t "NEW CATEGORY~%"))
+       (let* ((name (get-input "Category Name (e.g. \"SM64\"): " 'not-empty-string))
+              (percentage (get-input "Percentage (e.g. \"16 Star\"): " 'not-empty-string))
+              (category (mito:insert-dao (make-instance 'category :name name :percentage percentage)))
+              (splits (do ((spliti 1 (1+ spliti))
+                           (inputs '() (push (get-input (format nil "Split [~a]: " spliti)) inputs)))
+                          ((equal (car inputs) "")
+                           (mapcar (lambda
+                                       (category-split-name)
+                                     (mito:insert-dao
+                                      (make-instance 'category-split
+                                                     :name category-split-name
+                                                     :category category)))
+                                   (reverse (cdr inputs)))))))))
       ('START-SPEEDRUN
-        (let* ((categories (mito:select-dao 'category))
-               (category-alist (mapcar (lambda (category) `(,(category-name category) . ,category)) categories)))
-          (if categories
-              (speedrun-ui (select-option category-alist))
-              (format t "E: There are no categories. Try creating one or importing one"))))
+       (let* ((categories (mito:select-dao 'category))
+              (category-alist (mapcar (lambda (category) `(,(format nil "~a - ~a" (category-name category) (category-percentage category)) . ,category)) categories)))
+         (if categories
+             (speedrun-ui (select-option category-alist))
+             (format t "E: There are no categories. Try creating one or importing one"))))
       ('EXIT
        (quit))))
   (format t "~%")
