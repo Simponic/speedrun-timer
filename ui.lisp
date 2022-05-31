@@ -90,46 +90,57 @@
              (subseq elements (car elements-to-draw-subseq) (cadr elements-to-draw-subseq))))
    highlight-menu))
 
-(defun run-ui (category)
+(defun speedrun-ui (category)
   (croatoan:with-screen (scr :input-blocking nil :input-echoing nil :cursor-visible nil :enable-colors t :input-buffering nil :input-blocking nil)
     (setf (croatoan:background scr) (make-instance 'croatoan:complex-char :color-pair (cdr (assoc 'main *colors*))))
-    (let* ((state 'TITLE)
+    (let* ((scroll 0)
+           (frame 0)
+           (state 'TITLE)
            (redraws '(title-instance))
-           (speedrun (make-speedrun category)))
-      (croatoan:event-case (scr event)
-        (#\q (return-from croatoan:event-case))
-        (#\space
-         (case state
-           ('TITLE
-            (start-speedrun speedrun)
-            (setf state 'RUNNING))
-           ('RUNNING (next-split speedrun))))
-        (:resize nil)
-        ((nil)
-         (case state
-           ('TITLE 
-            (if (member 'title-instance redraws)
-                (let* ((padding 3)
-                       (width (+ (* 2 padding) (max-length *lispruns-logo*)))
-                       (height (+ (* 2 padding) (length *lispruns-logo*)))
-                       (logo-centered (center-box scr width height))
-                       (logo-box (make-instance 'croatoan:window :border t :width width :height height :position logo-centered)))
-                  (write-horizontal-slice-list logo-box `(,padding ,padding) *lispruns-logo*)
-                  (croatoan:refresh logo-box))))
-            ('RUNNING
-             (update-time speedrun)
-             (let ((timer-instance (timer-window speedrun '(10 10) 70 10)))
-               (croatoan:refresh timer-instance))))
-         (setf redraws '())
-         (sleep (/ 1 30)))))))
-
-
-;;    (setq hl (make-instance 'highlight-list
-;;                            :scroll-i 0
-;;                            :elements `(
-;;                                        (("HELLO" . ,(/ 1 2)) ("" . ,(/ 1 2)))
-;;                                        (("THIS IS A TEST" . ,(/ 1 2)) (" OF WRAPPING TRUNCATION" . ,(/ 1 2)))
-;;                                        )
-;;                            :current-element-index current-index
-;;                            :height 6
-;;                            :width 20))
+           (speedrun (make-speedrun category))
+           (csplits (category-splits category)))
+      (flet ((render () 
+               (case state
+                 ('TITLE 
+                  (if (member 'title-instance redraws)
+                      (croatoan:clear scr)
+                      (let* ((padding 3)
+                             (width (+ (* 2 padding) (max-length *lispruns-logo*)))
+                             (height (+ (* 2 padding) (length *lispruns-logo*)))
+                             (logo-centered (center-box scr width height))
+                             (logo-box (make-instance 'croatoan:window :border t :width width :height height :position logo-centered)))
+                        (write-horizontal-slice-list logo-box `(,padding ,padding) *lispruns-logo*)
+                        (croatoan:refresh logo-box))))
+                 ('RUNNING
+                  (update-time speedrun)
+                  (if (member 'timer-instance redraws)
+                      (croatoan:clear scr))
+                  (if (zerop (mod frame 4)) 
+                      (let* ((screen-thirds (floor (/ (croatoan:width scr) 3)))
+                             (split-list (make-instance 'highlight-list
+                                                        :scroll-i scroll 
+                                                        :current-element-index (if (eq (speedrun-state speedrun) 'STOPPED) (1- (length (speedrun-splits speedrun))) (speedrun-current-split-index speedrun))
+                                                        :height (croatoan:height scr)
+                                                        :width screen-thirds
+                                                        :elements (mapcar #'category-split-name csplits)))
+;;                                                        :elements `((("FIRST SPLIT IS EPIC" . ,(/ 4 12)) ("" . ,(/ 1 12)) ("10:10:00.22" . ,(/ 3 12)) ("" . ,(/ 1 12)) ("20:00.00" . ,(/ 3 12))))))
+                             (splits-instance (highlight-list-window split-list '(0 0)))
+                             (timer-instance (timer-window speedrun `(0 ,screen-thirds) (* 2 screen-thirds) 8)))
+                        (croatoan:refresh splits-instance)
+                        (croatoan:refresh timer-instance)))))
+               (setf redraws '()
+                     frame (mod (1+ frame) 60))
+               (if (zerop (mod frame 30))
+                   (inc scroll))
+               (sleep (/ 1 60))))
+        (croatoan:event-case (scr event)
+                             (#\q (return-from croatoan:event-case))
+                             (#\space
+                              (case state
+                                ('TITLE
+                                 (start-speedrun speedrun)
+                                 (setf redraws '(timer-instance))
+                                 (setf state 'RUNNING))
+                                ('RUNNING (next-split speedrun))))
+                             (:resize (render))
+                             ((nil) (render)))))))

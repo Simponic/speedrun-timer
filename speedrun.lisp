@@ -52,16 +52,21 @@
         (speedrun-start-timestamp speedrun) (get-internal-real-time)
         (run-split-start-time (current-split speedrun)) (local-time:now)))
 
+;; Saves the speedrun into the database
+(defun save-speedrun (speedrun)
+  (mapcar #'mito:save-dao (cons (speedrun-run-dao speedrun) (speedrun-splits speedrun))))
+
 ;; Set the state of the speedrun to be stopped if there are no more splits.
 ;; Or, set the current split to the next one in the list.
 (defun next-split (speedrun)
   (let ((now (local-time:now)))
-    (setf (run-split-end-time (current-split speedrun)) now)
-    (inc (speedrun-current-split-index speedrun))
-    (if (equal (speedrun-current-split-index speedrun) (length (speedrun-splits speedrun)))
-        (setf (speedrun-state speedrun) 'STOPPED)
-      (setf (run-split-start-time (current-split speedrun)) now))))
+    (unless (equal (speedrun-state speedrun) 'STOPPED)
+      (setf (run-split-end-time (current-split speedrun)) now)
+      (if (equal (speedrun-current-split-index speedrun) (1- (length (speedrun-splits speedrun))))
+          (progn
+            (setf (speedrun-state speedrun) 'STOPPED)
+            (save-speedrun speedrun))
+          (progn
+            (inc (speedrun-current-split-index speedrun))
+            (setf (run-split-start-time (current-split speedrun)) now))))))
 
-;; Saves the speedrun into the database
-(defun save-speedrun (speedrun)
-  (mapcar #'mito:save-dao (cons (speedrun-run-dao speedrun) (speedrun-splits speedrun))))

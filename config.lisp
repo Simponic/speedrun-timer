@@ -76,7 +76,7 @@
 
 ;; Driver that takes the config and inserts the category and its 
 ;; splits into the db, obviously requires a mito toplevel connection
-(defun import-config (file-path)
+(defun import-category (file-path)
   (let*
       ((config-sections (sections (read-lines file-path)))
        (category (mito:insert-dao (create-category-object (get-section "category" config-sections))))
