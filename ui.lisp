@@ -1,11 +1,3 @@
-(defparameter *lispruns-logo* 
-  '("db      d888888b .d8888. d8888b. d8888b. db    db d8b   db .d8888."
-    "88        `88'   88'  YP 88  `8D 88  `8D 88    88 888o  88 88'  YP"
-    "88         88    `8bo.   88oodD' 88oobY' 88    88 88V8o 88 `8bo.  "   
-    "88         88      `Y8b. 88~~~   88`8b   88    88 88 V8o88   `Y8b."
-    "88booo.   .88.   db   8D 88      88 `88. 88b  d88 88  V888 db   8D"
-    "Y88888P Y888888P `8888Y' 88      88   YD ~Y8888P' VP   V8P `8888Y'"))
-
 (defparameter *colors*
   '((main . (:green :black))
     (timer-box . (:red :black))
