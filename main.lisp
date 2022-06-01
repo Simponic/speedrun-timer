@@ -20,7 +20,7 @@
     (if (ignore-errors (funcall validator input))
         input
         (progn
-          (format t "E: Invalid input. Try again.")
+          (format t "E: Invalid input. Try again.~%")
           (get-input prompt validator)))))
 
 ;; Options is an alist with the prompt string as the car and the value as the cdr
@@ -53,6 +53,29 @@
               (progn (format t "E: Could not find option that matched query.~%")
                      (select-option options)))))))
 
+(defun user-create-new-category ()
+  (let* ((name (get-input "Category Name (e.g. \"SM64\"): " 'empty-p))
+         (percentage (get-input "Percentage (e.g. \"16 Star\"): " 'empty-p))
+         (category (mito:insert-dao (make-instance 'category :name name :percentage percentage)))
+         (splits (do ((spliti 1 (1+ spliti))
+                      (inputs '() (push (get-input (format nil "Split Name [~a]~a: " spliti (if (<= spliti 1) " (blank when done adding)" ""))) inputs)))
+                     ((equal (car inputs) "")
+                      (mapcar (lambda
+                                  (category-split-name)
+                                (mito:insert-dao
+                                 (make-instance 'category-split
+                                                :name category-split-name
+                                                :category category)))
+                              (reverse (cdr inputs)))))))))
+
+(defun with-selected-category (f)
+  (let* ((categories (mito:select-dao 'category))
+         (category-alist (mapcar (lambda (category) `(,(format nil "~a - ~a" (category-name category) (category-percentage category)) . ,category)) categories)))
+    (if categories
+        (funcall f (select-option category-alist))
+        (format t "E: There are no categories. Try creating one or importing one"))))
+
+    
 (defun main ()
   (let ((choice (select-option '(("Help" . HELP)
                                  ("Import a category" . IMPORT-CATEGORY)
@@ -62,6 +85,7 @@
                                  ("Exit" . EXIT)))))
     (case choice
       ('HELP
+       (format t "~%")
        (mapcar #'(lambda (x) (format t "~a~%" x)) *lispruns-logo*))
       ('IMPORT-CATEGORY
        (import-category (get-input
@@ -69,25 +93,9 @@
                                  (uiop/os:getcwd))
                          'probe-file)))
       ('NEW-CATEGORY
-       (let* ((name (get-input "Category Name (e.g. \"SM64\"): " 'not-empty-string))
-              (percentage (get-input "Percentage (e.g. \"16 Star\"): " 'not-empty-string))
-              (category (mito:insert-dao (make-instance 'category :name name :percentage percentage)))
-              (splits (do ((spliti 1 (1+ spliti))
-                           (inputs '() (push (get-input (format nil "Split [~a]: " spliti)) inputs)))
-                          ((equal (car inputs) "")
-                           (mapcar (lambda
-                                       (category-split-name)
-                                     (mito:insert-dao
-                                      (make-instance 'category-split
-                                                     :name category-split-name
-                                                     :category category)))
-                                   (reverse (cdr inputs)))))))))
+       (user-create-new-category))
       ('START-SPEEDRUN
-       (let* ((categories (mito:select-dao 'category))
-              (category-alist (mapcar (lambda (category) `(,(format nil "~a - ~a" (category-name category) (category-percentage category)) . ,category)) categories)))
-         (if categories
-             (speedrun-ui (select-option category-alist))
-             (format t "E: There are no categories. Try creating one or importing one"))))
+       (with-selected-category 'speedrun-ui))
       ('EXIT
        (quit))))
   (format t "~%")

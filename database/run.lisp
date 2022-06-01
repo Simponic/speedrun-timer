@@ -24,11 +24,15 @@
     (if start
         (floor (* 100 (local-time:timestamp-difference end start))))))
 
-(defun format-elapsed-time (run-split)
+(defun run-split-format-elapsed-time (run-split)
   (let ((elapsed (run-split-elapsed-time run-split)))
     (if elapsed
         (format-time (make-time-alist elapsed))
         "-")))
+
+;;(defun best-split (category-split)
+;;  (mito:select-dao 'run-split
+;;                   (sxql:order-by (:- V
 
 ;; Returns stuff like PB, best of each split, etc.
 (defun run-statistics (category)

@@ -18,6 +18,12 @@
               (inc yi))
             slices)))
 
+;; Formats a category split and a run split for the splits window
+(defun make-split-line (csplit speedrun-split)
+  `((,(category-split-name csplit) . ,(/ 4 12))
+    ("" . ,(/ 1 12))
+    (,(run-split-format-elapsed-time speedrun-split) . ,(/ 3 12))))
+
 ;; Creates a window with the total time and statistics 
 (defun timer-window (speedrun pos width height)
   (let* ((timerglet (lispglet (format-time (make-time-alist (speedrun-elapsed speedrun)))))
@@ -82,6 +88,7 @@
              (subseq elements (car elements-to-draw-subseq) (cadr elements-to-draw-subseq))))
    highlight-menu))
 
+;; The big bad monolithic UI loop
 (defun speedrun-ui (category)
   (croatoan:with-screen (scr :input-blocking nil :input-echoing nil :cursor-visible nil :enable-colors t :input-buffering nil :input-blocking nil)
     (setf (croatoan:background scr) (make-instance 'croatoan:complex-char :color-pair (cdr (assoc 'main *colors*))))
@@ -90,7 +97,9 @@
            (state 'TITLE)
            (redraws '(title-instance))
            (speedrun (make-speedrun category))
-           (csplits (category-splits category)))
+           (csplits (category-splits category))
+           ;; TODO
+           (pbs ()))
       (flet ((render () 
                (case state
                  ('TITLE 
@@ -124,16 +133,8 @@
                                                         :current-element-index (speedrun-current-split-index speedrun)
                                                         :height splits-height
                                                         :width max-width
-                                                        :elements (mapcar (lambda (csplit speedrun-split)
-                                                                            `(
-                                                                              (,(category-split-name csplit) . ,(/ 4 12))
-                                                                              ("" . ,(/ 1 12))
-                                                                              (,(format-elapsed-time speedrun-split) . ,(/ 3 12))
-                                                                              ))
-                                                                          csplits
-                                                                          (speedrun-splits speedrun))))
-;;                                                        :elements (mapcar #'category-split-name csplits)))
-;;                                                        :elements `((("FIRST SPLIT IS EPIC" . ,(/ 4 12)) ("" . ,(/ 1 12)) ("10:10:00.22" . ,(/ 3 12)) ("" . ,(/ 1 12)) ("20:00.00" . ,(/ 3 12))))))
+                                                        ;; Todo: add personal bests to elements
+                                                        :elements (mapcar 'make-split-line csplits (speedrun-splits speedrun))))
                              (splits-instance (highlight-list-window split-list `(0 ,centered-x)))
                              (timer-instance (timer-window speedrun `(,splits-height ,centered-x) max-width timer-height)))
                         (croatoan:refresh splits-instance)
@@ -143,6 +144,7 @@
                (if (zerop (mod frame 30))
                    (inc scroll))
                (sleep (/ 1 60))))
+
         (croatoan:event-case (scr event)
                              (#\q (return-from croatoan:event-case))
                              (#\space
