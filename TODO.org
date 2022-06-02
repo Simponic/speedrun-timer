@@ -1,0 +1,6 @@
+1. Move speedrun splits to use elapsed-time
+2. Move back to milliseconds
+3. save-speedrun will add up all these elapsed-time's up from speedrun-start-timestamp to calculate the start and end time
+4. Don't set the overall timer elapsed time to sum of splits
+
+
