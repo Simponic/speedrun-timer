@@ -44,13 +44,14 @@
 ;; Updates the current total elapsed time of the speedrun if it's running
 (defun update-time (speedrun)
   (if (eq (speedrun-state speedrun) 'RUNNING)
-      (setf (speedrun-elapsed speedrun) (floor (* 100 (/ (- (get-internal-real-time) (speedrun-start-timestamp speedrun)) internal-time-units-per-second))))))
+      (setf (speedrun-elapsed speedrun) (millis-since-internal-timestamp (speedrun-start-timestamp speedrun)))))
 
 ;; Initializes a speedrun to start running the timer
 (defun start-speedrun (speedrun)
-  (setf (speedrun-state speedrun) 'RUNNING
-        (speedrun-start-timestamp speedrun) (get-internal-real-time)
-        (run-split-start-time (current-split speedrun)) (local-time:now)))
+  (let ((now (get-internal-real-time)))
+    (setf (speedrun-state speedrun) 'RUNNING
+          (speedrun-start-timestamp speedrun) now 
+          (run-split-start-timestamp (current-split speedrun)) now)))
 
 ;; Saves the speedrun into the database
 (defun save-speedrun (speedrun)
@@ -59,16 +60,18 @@
 ;; Set the state of the speedrun to be stopped if there are no more splits.
 ;; Or, set the current split to the next one in the list.
 (defun next-split (speedrun)
-  (let ((now (local-time:now)))
+  (let ((now (get-internal-real-time)))
     (unless (equal (speedrun-state speedrun) 'STOPPED)
-      (setf (run-split-end-time (current-split speedrun)) now)
+      (setf (run-split-end-timestamp (current-split speedrun)) now)
       (if (equal (speedrun-current-split-index speedrun) (1- (length (speedrun-splits speedrun))))
           (progn
             (setf
-             (speedrun-elapsed speedrun) (apply '+ (mapcar 'run-split-elapsed-time (speedrun-splits speedrun)))
+             (run-end-date (speedrun-run-dao speedrun)) (local-time:now)
+             ;; Since timer can get +-0.02 seconds out of sync of splits, just set it to the sum of the splits' elapsed
+             (speedrun-elapsed speedrun) (millis-since-internal-timestamp 0 (apply '+ (mapcar 'run-split-elapsed-time (speedrun-splits speedrun)))) 
              (speedrun-state speedrun) 'STOPPED)
             (save-speedrun speedrun))
           (progn
             (inc (speedrun-current-split-index speedrun))
-            (setf (run-split-start-time (current-split speedrun)) now))))))
+            (setf (run-split-start-timestamp (current-split speedrun)) now))))))
 

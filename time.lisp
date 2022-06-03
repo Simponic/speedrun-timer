@@ -1,9 +1,11 @@
-;; Makes a-list with '((hours . HOURS) (minutes . MINUTES) (seconds . SECONDS) (cs . CENTISECONDS))
-(defun make-time-alist (cs)
-  `((hours    . ,(floor (/ cs (* 100 60 60))))
-	  (minutes . ,(floor (mod (/ cs (* 100 60)) 60)))
-	  (seconds . ,(floor (mod (/ cs 100) 60)))
-	  (cs      . ,(mod cs 100))))
+(defun millis-since-internal-timestamp (start-timestamp &optional (end-timestamp (get-internal-real-time)))
+  (ceiling (* 1000 (/ (- end-timestamp start-timestamp) internal-time-units-per-second))))
+
+(defun make-time-alist (millis)
+  `((hours    . ,(floor (/ millis (* 1000 60 60))))
+	  (minutes  . ,(floor (mod (/ millis (* 1000 60)) 60)))
+	  (seconds  . ,(floor (mod (/ millis 1000) 60)))
+	  (millis   . ,(mod millis 1000))))
 
 ;; Formats, disregarding min/hour if they shouldn't be shown, a time alist to "H:M:S.ms"
 (defun format-time (time-alist)
@@ -11,7 +13,7 @@
       ((hours (cdr (assoc 'hours time-alist)))
        (minutes (cdr (assoc 'minutes time-alist)))
        (seconds (cdr (assoc 'seconds time-alist)))
-       (centis (cdr (assoc 'cs time-alist))))
+       (centis (floor (/ (cdr (assoc 'millis time-alist)) 10))))
     (concatenate 'string
                  (unless (zerop hours) (format nil "~2,'0d:" hours))
                  (unless (and (zerop minutes) (zerop hours)) (format nil "~2,'0d:" minutes))

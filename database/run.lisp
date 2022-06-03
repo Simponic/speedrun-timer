@@ -1,13 +1,14 @@
 (mito:deftable run ()
-  ((category :col-type category))
+  ((category :col-type category)
+   (end-date :col-type (or :datetime :null)))
   (:record-timestamps nil)
   (:conc-name run-))
   
 (mito:deftable run-split ()
   ((run :col-type run)
    (category-split :col-type category-split)
-   (start-time :col-type (or :datetime :null))
-   (end-time :col-type (or :datetime :null)))
+   (start-timestamp :col-type (or :bigint :null))
+   (end-timestamp :col-type (or :bigint :null)))
   (:record-timestamps nil)
   (:conc-name run-split-))
 
@@ -21,22 +22,20 @@
 ;; Returns the elapsed time in milliseconds since split started to either
 ;; current time or the split's end time
 (defun run-split-elapsed-time (run-split)
-  (let ((start (ignore-errors (run-split-start-time run-split)))
-        (end (or (ignore-errors (run-split-end-time run-split)) (local-time:now))))
+  (let ((start (ignore-errors (run-split-start-timestamp run-split)))
+        (end (or (ignore-errors (run-split-end-timestamp run-split)) (get-internal-real-time))))
     (if start
-        (floor (* 100 (local-time:timestamp-difference end start))))))
+        (- end start))))
 
 (defun run-split-format-elapsed-time (run-split)
   (let ((elapsed (run-split-elapsed-time run-split)))
     (if elapsed
-        (format-time (make-time-alist elapsed))
+        (format-time (make-time-alist (millis-since-internal-timestamp 0 elapsed)))
         "-")))
-
-
 
 (defmacro query-with-runs-elapsed (&rest body)
   `(mito:retrieve-by-sql
-    (sxql:select (:* (:as (:raw "sum(julianday(end_time) - julianday(start_time))*24*60*60") :elapsed))
+    (sxql:select (:* (:as (:sum (:* (:/ (:raw "end_timestamp - CAST(start_timestamp AS REAL)") ,internal-time-units-per-second) 1000)) :elapsed))
                  (sxql:from :run_split)
                  (sxql:group-by :run_id)
                  ,@body)))
