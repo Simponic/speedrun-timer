@@ -69,12 +69,13 @@
    (sxql:where (:= :category_id (mito:object-id category)))))
 
 
-(defun statistics (category-splits)
-  `((SPLIT-PBS ,(mapcar (lambda (category) (getf (best-category-split category) :ELAPSED)) csplits))
-    (BEST-CATEGORY-RUN-SPLITS ,(or
-                                (mapcar (lambda (split)
-                                          (millis-since-internal-timestamp 0 (run-split-elapsed-time split)))
-                                        (ignore-errors
-                                          (run-splits (mito:find-dao 'run :id (getf (best-category-run category) :RUN-ID)))))
-                                (mapcar (lambda (csplit) nil) csplits)))))
+(defun statistics (category)
+  (let ((csplits (category-splits category)))
+    `((SPLIT-PBS . ,(mapcar (lambda (csplit) (getf (best-category-split csplit) :ELAPSED)) csplits))
+      (BEST-CATEGORY-RUN-SPLITS . ,(or
+                                  (mapcar (lambda (split)
+                                            (millis-since-internal-timestamp 0 (run-split-elapsed-time split)))
+                                          (ignore-errors
+                                           (run-splits (mito:find-dao 'run :id (getf (best-category-run category) :RUN-ID)))))
+                                  (mapcar (lambda (csplit) nil) csplits))))))
   

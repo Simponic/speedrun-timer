@@ -109,9 +109,9 @@
   (let ((choice (select-option '(("Help" . HELP)
                                  ("Import a category" . IMPORT-CATEGORY)
                                  ("Make a new category" . NEW-CATEGORY)
-                                 ("Delete a category" . DELETE-CATEGORY)
                                  ("Start a speedrun" . START-SPEEDRUN)
                                  ("View splits of a speedrun" . VIEW-SPEEDRUNS)
+                                 ("Delete a category" . DELETE-CATEGORY)
                                  ("Delete a speedrun" . DELETE-SPEEDRUN)
                                  ("Exit" . EXIT)))))
     (case choice
