@@ -1,6 +1,5 @@
 (mito:deftable run ()
-  ((category :col-type category)
-   (end-date :col-type (or :datetime :null)))
+  ((category :col-type category))
   (:record-timestamps nil)
   (:conc-name run-))
   
@@ -13,11 +12,14 @@
   (:conc-name run-split-))
 
 
-
 (defun run-splits (run)
   (mito:select-dao 'run-split
                    (sxql:order-by :category_split_id)
                    (sxql:where (:= :run run))))
+
+(defun delete-run (run)
+  (let ((splits (run-splits run)))
+    (mapcar 'mito:delete-dao (cons run splits))))
 
 ;; Returns the elapsed time in milliseconds since split started to either
 ;; current time or the split's end time
@@ -41,20 +43,20 @@
                  ,@body)))
 
 (defun best-category-run (category)
-  (query-with-runs-elapsed
-   (sxql:inner-join :run :on (:= :run_id :run.id))
-   (sxql:order-by :elapsed)
-   (sxql:limit 1)
-   (sxql:where (:= :category_id (mito:object-id category)))))
+  (car (query-with-runs-elapsed
+        (sxql:inner-join :run :on (:= :run_id :run.id))
+        (sxql:order-by :elapsed)
+        (sxql:limit 1)
+        (sxql:where (:= :category_id (mito:object-id category))))))
 
 (defun best-category-split (category-split)
-  (query-with-runs-elapsed
-   (sxql:inner-join :category_split :on (:= :category_split_id :category_split.id))
-   (sxql:order-by :elapsed)
-   (sxql:limit 1)
-   (sxql:where (:= :category_split_id (mito:object-id category-split)))))
+  (car (query-with-runs-elapsed
+        (sxql:inner-join :category_split :on (:= :category_split_id :category_split.id))
+        (sxql:order-by :elapsed)
+        (sxql:limit 1)
+        (sxql:where (:= :category_split_id (mito:object-id category-split))))))
 
-(defun list-runs (&key (order-element :end-time) (direction :asc))
+(defun list-runs (&key (order-element :id) (direction :asc))
   (query-with-runs-elapsed
    (sxql:inner-join :run :on (:= :run_id :run.id))
    (sxql:inner-join :category :on (:= :category_id :category.id))
@@ -65,3 +67,14 @@
    (sxql:inner-join :run :on (:= :run_id :run.id))
    (sxql:order-by (list direction order-element))
    (sxql:where (:= :category_id (mito:object-id category)))))
+
+
+(defun statistics (category-splits)
+  `((SPLIT-PBS ,(mapcar (lambda (category) (getf (best-category-split category) :ELAPSED)) csplits))
+    (BEST-CATEGORY-RUN-SPLITS ,(or
+                                (mapcar (lambda (split)
+                                          (millis-since-internal-timestamp 0 (run-split-elapsed-time split)))
+                                        (ignore-errors
+                                          (run-splits (mito:find-dao 'run :id (getf (best-category-run category) :RUN-ID)))))
+                                (mapcar (lambda (csplit) nil) csplits)))))
+  

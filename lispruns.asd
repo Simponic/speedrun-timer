@@ -5,8 +5,7 @@
   :depends-on (:mito
                :sxql
                :cl-ppcre
-               :croatoan
-               :local-time)
+               :croatoan)
   :components ((:file "util") ;; Miscellaneous helpers
                (:file "config") ;; For importing category configuration files
                (:file "digits") ;; Lisp file with cool ascii digits

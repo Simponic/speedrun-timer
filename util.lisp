@@ -10,5 +10,5 @@
 (defun max-length (lists)
   (reduce (lambda (a x) (max a x)) (mapcar #'length lists)))
 
-(defun empty-p (s)
+(defun nonempty-p (s)
   (not (zerop (length s))))

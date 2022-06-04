@@ -15,7 +15,7 @@
 (defun sections (lines &optional (section-list '()) (current-section "") (current-section-list '()))
   (if (not lines)
       (cond
-        ((> (length current-section) 0)
+        ((nonempty-p current-section)
          (cons (list current-section current-section-list) section-list))
         (t section-list))
       (let* ((line (car lines))
@@ -24,7 +24,7 @@
           ((= linelen 0)
            (sections (cdr lines) section-list current-section current-section-list))
           ((and (equal #\[ (char line 0)) (equal #\] (char line (1- linelen))))
-           (sections (cdr lines) (unless (= (length current-section) 0)
+           (sections (cdr lines) (unless (not (nonempty-p current-section))
                                      (cons (list current-section current-section-list) section-list))
                      (subseq line 1 (1- linelen))))
           (t

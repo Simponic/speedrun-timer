@@ -1,6 +1,6 @@
 (defparameter *colors*
   '((main . (:green :black))
-    (timer-box . (:red :black))
+    (timer-box . (:green :black))
     (selected-highlight . (:blue :black))
     (unselected-highlight . (:white :black))))
 
@@ -19,10 +19,21 @@
             slices)))
 
 ;; Formats a category split and a run split for the splits window
-(defun make-split-line (csplit speedrun-split)
-  `((,(category-split-name csplit) . ,(/ 4 12))
-    ("" . ,(/ 1 12))
-    (,(run-split-format-elapsed-time speedrun-split) . ,(/ 3 12))))
+(defun make-split-line (csplit speedrun-split pb)
+  (let ((split-elapsed (run-split-elapsed-time speedrun-split))
+        (format-split-elapsed (run-split-format-elapsed-time speedrun-split)))
+    `((,(category-split-name csplit) . ,(/ 4 12))
+      ("" . ,(/ 1 12))
+      (,format-split-elapsed . ,(/ 3 12))
+      ("" . ,(/ 1 12))
+      (,(if pb
+            (let ((split-end-timestamp (ignore-errors (run-split-end-timestamp speedrun-split))))
+              (if split-end-timestamp
+                  (let ((elapsed-diff (- (millis-since-internal-timestamp 0 split-elapsed) pb)))
+                    (concatenate 'string (if (plusp elapsed-diff) "+" "-") (format-time (make-time-alist (abs elapsed-diff)))))
+                  (format-time (make-time-alist pb))))
+            format-split-elapsed)
+       . ,(/ 3 12)))))
 
 ;; Creates a window with the total time and statistics 
 (defun timer-window (speedrun pos width height)
@@ -32,8 +43,7 @@
                                    :position pos
                                    :width width 
                                    :height height)))
-    (setf (croatoan:color-pair timer-box)
-          (cdr (assoc 'timer-box *colors*)))
+    (setf (croatoan:color-pair timer-box) (cdr (assoc 'timer-box *colors*)))
     (write-horizontal-slice-list timer-box '(1 1) timerglet)
     timer-box))
 
@@ -92,14 +102,17 @@
 (defun speedrun-ui (category)
   (croatoan:with-screen (scr :input-blocking nil :input-echoing nil :cursor-visible nil :enable-colors t :input-buffering nil :input-blocking nil)
     (setf (croatoan:background scr) (make-instance 'croatoan:complex-char :color-pair (cdr (assoc 'main *colors*))))
+
+    ;; Create a closure over the UI state
     (let* ((scroll 0)
            (frame 0)
            (state 'TITLE)
            (redraws '(title-instance))
            (speedrun (make-speedrun category))
-           (csplits (category-splits category))
-           ;; TODO
-           (pbs ()))
+           (bests (statistics (category-splits category)))
+           (split-pbs (cdr (assoc 'SPLIT-PBS bests)))
+           (best-category-run-pbs (cdr (assoc 'BEST-CATEGORY-RUN-SPLITS bests))))
+
       (flet ((render () 
                (case state
                  ('TITLE 
@@ -134,7 +147,7 @@
                                                         :height splits-height
                                                         :width max-width
                                                         ;; Todo: add personal bests to elements
-                                                        :elements (mapcar 'make-split-line csplits (speedrun-splits speedrun))))
+                                                        :elements (mapcar 'make-split-line csplits (speedrun-splits speedrun) best-category-run-pbs)))
                              (splits-instance (highlight-list-window split-list `(0 ,centered-x)))
                              (timer-instance (timer-window speedrun `(,splits-height ,centered-x) max-width timer-height)))
                         (croatoan:refresh splits-instance)

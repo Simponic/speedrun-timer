@@ -6,9 +6,6 @@
    (title
     :initarg :title
     :accessor speedrun-title)
-   ;; Whatever internal time units decided by SBCL (get-internal-real-time)
-   ;; (local-time:now) *could* be used, but by my testing it's around 6 times slower
-   ;; so why not
    (start-timestamp
     :initarg :start-timestamp
     :accessor speedrun-start-timestamp)
@@ -66,8 +63,7 @@
       (if (equal (speedrun-current-split-index speedrun) (1- (length (speedrun-splits speedrun))))
           (progn
             (setf
-             (run-end-date (speedrun-run-dao speedrun)) (local-time:now)
-             ;; Since timer can get +-0.02 seconds out of sync of splits, just set it to the sum of the splits' elapsed
+             ;; Since timer computation can get +-0.02 seconds out of sync of splits, just set it to the sum of the splits' elapsed time
              (speedrun-elapsed speedrun) (millis-since-internal-timestamp 0 (apply '+ (mapcar 'run-split-elapsed-time (speedrun-splits speedrun)))) 
              (speedrun-state speedrun) 'STOPPED)
             (save-speedrun speedrun))
