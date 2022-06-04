@@ -109,7 +109,8 @@
            (state 'TITLE)
            (redraws '(title-instance))
            (speedrun (make-speedrun category))
-           (bests (statistics (category-splits category)))
+           (csplits (category-splits category))
+           (bests (statistics csplits))
            (split-pbs (cdr (assoc 'SPLIT-PBS bests)))
            (best-category-run-pbs (cdr (assoc 'BEST-CATEGORY-RUN-SPLITS bests))))
 
