@@ -9,5 +9,5 @@ Showcase of features on [[https://youtu.be/WJgRw6Mvdl4][YouTube]]
 + [[https://www.sqlite.org/download.html][SQLite]]
 * Running Interactively
 1. Load the package ~sbcl --load lispruns.asd~
-2. load it with quicklisp: ~(ql:quickload 'lispruns)~
+2. Load it with quicklisp: ~(ql:quickload 'lispruns)~
 3. ~(main)~
