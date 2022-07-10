@@ -6,7 +6,7 @@
 
 (mito:deftable category-split ()
   ((name :col-type (:varchar 128))
-   (category :col-type category))
+   (category :col-type category :accessor category-split-category))
   (:record-timestamps nil)
   (:conc-name category-split-))
 
