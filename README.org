@@ -1,7 +1,7 @@
 * SBCL Speedrun Timer
 This is a complete rewrite of my first Lisp project: a speedrun timer. It uses an ncurses wrapper (croatoan) and a SQLite database, with the [[https://github.com/fukamachi/mito][MITO ORM.]]
 
-Showcase of features on [[https://youtu.be/WJgRw6Mvdl4][YouTube]], because I hate documenting.
+Go ahead and check out a demo on [[https://youtu.be/WJgRw6Mvdl4][YouTube]]!
 
 ** Requirements
 + [[https://www.quicklisp.org/beta/][Quicklisp]]
